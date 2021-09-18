@@ -1,0 +1,185 @@
+-- ------------------------------------------------------------------------------------------------
+-- SHANGHAI-FANUC Robotics retains rights in any and all software contained in material attached
+-- herein. Software may not be copied, used, reproduced or transmitted in whole or in part in any way
+-- without written permission of SHANGHAI-FANUC Robotics.
+--
+--           All Software Reserved
+--           Copyright(C) 2020
+--           SHANGHAI-FANUC Robotics Co., Ltd
+--
+-- Program Name:        utils_math.kl
+-- Description:         KAREL extension routine (Mathematics)
+-- Controller version:  V9.00
+-- 
+-- Authors:             SHANGHAI-FANUC Robotics Co., Ltd
+--                      No. 1500 Fulian Road, Baoshan District, Shanghai 201906
+-- ------------------------------------------------------------------------------------------------
+PROGRAM utils_math
+
+%COMMENT = 'Ver01.00'
+%STACKSIZE = 4000
+%INVISIBLE
+%RWACCESS
+
+
+
+
+-- #Routine
+-- ------------------------------------------------------------------------------------------------
+-- Returns a random real between zero and one determined by the current time in microseconds.
+ROUTINE random: REAL
+BEGIN
+    -- Linear congruential method. 
+    -- Xn+1 = (aXn + c) MOD m
+    RETURN((((GET_USEC_TIM AND 65535) * 25173 + 13849) MOD 65536) / 65535)
+END random
+
+
+-- Returns the decimal part of a real number.
+-- @param x                 A real representation.
+ROUTINE fract(x: REAL): REAL
+BEGIN
+    RETURN(x - TRUNC(x))
+END fract
+
+
+-- Returns the nth power of a real number.
+-- @param x                 A real representation.
+-- @param n                 Indicates the exponent of a power. If it's negative, the reciprocal of the power is returned.
+ROUTINE power(x: REAL; n: INTEGER): REAL
+BEGIN
+    RETURN(EXP(LN(x) * n))
+END power
+
+
+-- Returns the nth root of a real number.
+-- @param x                 A real representation.
+-- @param n                 Indicates the index of a radical. If it's negative, the reciprocal of the root is returned.
+ROUTINE root(x: REAL; n: INTEGER): REAL
+BEGIN
+    RETURN(EXP(LN(x) * (1 / n)))
+END root
+
+
+-- Returns the smallest integer greater than or equal to its numeric argument.
+-- @param x                 A real representation.
+ROUTINE ceil(x: REAL): INTEGER
+BEGIN
+    IF fract(x) = 0.0 THEN
+        RETURN(TRUNC(x))
+    ELSE
+        RETURN(TRUNC(x) + 1)
+    ENDIF
+END ceil
+
+
+-- Returns the greatest integer less than or equal to its numeric argument.
+-- @param x                 A real representation.
+ROUTINE floor(x: REAL): INTEGER
+BEGIN
+    IF x >= 0.0 THEN
+        RETURN(TRUNC(x))
+    ELSE
+        RETURN(TRUNC(x) - 1)
+    ENDIF
+END floor
+
+
+-- Returns the greatest common divisior of two integers.
+-- @param x                 An integer representation.
+-- @param y                 An integer representation.
+ROUTINE gcd(x: INTEGER; y: INTEGER): INTEGER
+BEGIN
+    -- Euclidean Algorithm: (x,y) = (y, x mod y)
+    IF x AND (y - 1)  = 0 THEN
+        RETURN(y)
+    ELSE
+        RETURN(gcd(y, x AND (y - 1)))
+    ENDIF
+END gcd
+
+
+-- Returns the least common multiple of two integers.
+-- @param x                 An integer representation.
+-- @param y                 An integer representation.
+ROUTINE lcm(x: INTEGER; y: INTEGER): INTEGER
+BEGIN
+    -- [x, y] = x * y / (x, y)
+    RETURN(x * y DIV gcd(x, y))
+END lcm
+
+
+-- Returns the maximum value of integers in an array.
+-- @param ints              An integer array.
+--ROUTINE maxInt(ints: ARRAY OF INTEGER): INTEGER
+--VAR
+    --i_: INTEGER
+    --max_: INTEGER
+--BEGIN
+    --max_ = 0
+    --FOR i_ = 1 TO ARRAY_LEN(ints) DO
+        --IF ints[i_] >= max_ THEN
+            --max_ = ints[i_]
+        --ENDIF
+    --ENDFOR
+    --RETURN(max_)
+--END maxInt
+
+
+-- Returns the minimum value of integers in an array.
+-- @param ints              An integer array.
+--ROUTINE minInt(ints: ARRAY OF INTEGER): INTEGER
+--VAR
+    --i_: INTEGER
+    --min_: INTEGER
+--BEGIN
+    --FOR i_ = 1 TO ARRAY_LEN(ints) DO
+        --IF ints[i_] <= min_ THEN
+            --min_ = ints[i_]
+        --ENDIF
+    --ENDFOR
+    --RETURN(min_)
+--END minInt
+
+
+-- Returns the maximum value of integers in an array.
+-- @param reals             A real array.
+ROUTINE maxReal(reals: ARRAY OF REAL): REAL
+VAR
+    i_: INTEGER
+    max_: REAL
+BEGIN
+    max_ = 0.0
+    FOR i_ = 1 TO ARRAY_LEN(reals) DO
+        IF reals[i_] >= max_ THEN
+            max_ = reals[i_]
+        ENDIF
+    ENDFOR
+    RETURN(max_)
+END maxReal
+
+
+-- Returns the minimum value of integers in an array.
+-- @param reals             A real array.
+ROUTINE minReal(reals: ARRAY OF REAL): REAL
+VAR
+    i_: INTEGER
+    min_: REAL
+BEGIN
+    FOR i_ = 1 TO ARRAY_LEN(reals) DO
+        IF reals[i_] <= min_ THEN
+            min_ = reals[i_]
+        ENDIF
+    ENDFOR
+    RETURN(min_)
+END minReal
+
+
+
+
+
+
+-- #Main
+-- ------------------------------------------------------------------------------------------------
+BEGIN
+END utils_math

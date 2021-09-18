@@ -1,0 +1,222 @@
+-- ------------------------------------------------------------------------------------------------
+-- SHANGHAI-FANUC Robotics retains rights in any and all software contained in material attached
+-- herein. Software may not be copied, used, reproduced or transmitted in whole or in part in any way
+-- without written permission of SHANGHAI-FANUC Robotics.
+--
+--           All Software Reserved
+--           Copyright(C) 2020
+--           SHANGHAI-FANUC Robotics Co., Ltd
+--
+-- Program Name:        utils_robot.kl
+-- Description:         KAREL extension routine (Robot System)
+-- Controller version:  V9.00
+-- 
+-- Authors:             SHANGHAI-FANUC Robotics Co., Ltd
+--                      No. 1500 Fulian Road, Baoshan District, Shanghai 201906
+-- ------------------------------------------------------------------------------------------------
+PROGRAM utils_robot
+
+%COMMENT = 'Ver00.08'
+%STACKSIZE = 4000
+%INVISIBLE
+%RWACCESS
+
+
+
+
+%INCLUDE /extension/enum_error
+
+VAR
+    status: INTEGER
+
+
+
+
+%INCLUDE /extension/utils_system
+
+
+
+
+-- #Routine <Robot Configuration>
+-- ------------------------------------------------------------------------------------------------
+-- Returns the number of configured groups for the robot.
+ROUTINE numberOfGroups: INTEGER
+BEGIN
+    RETURN($SCR.$NUM_GROUP)
+END numberOfGroups
+
+
+-- Returns the tool coordinate system of the corresponding robot group number and index.
+-- @param index             The index at which of the tool coordinate system to get, corresponding to the specified robot group.
+--                          It must be between one and the maximum number of tool coordinate systems of the robot. If not, return
+--                          to the default tool coordinate system.
+-- @param group_number      The index to specify robot group.
+ROUTINE toolFrameOf(index: INTEGER; group_number: INTEGER): POSITION
+BEGIN
+    IF NOT validateInt(group_number, 1, numberOfGroups) THEN
+        group_number = 1
+    ENDIF
+    IF NOT validateInt(index, 1, $SCR.$MAXNUMUTOOL) THEN
+        RETURN($GROUP[group_number].$UTOOL)
+    ENDIF
+    RETURN($MNUTOOL[group_number, index])
+END toolFrameOf
+
+
+-- Returns the user coordinate system of the corresponding robot group number and index.
+-- @param index             The index at which of the user coordinate system to get, corresponding to the specified robot group.
+--                          It must be between zero and the maximum number of user coordinate systems of the robot. If not, return
+--                          to the default user coordinate system.
+-- @param group_number      The index to specify robot group.
+ROUTINE userFrameOf(index: INTEGER; group_number: INTEGER): POSITION
+BEGIN
+    IF NOT validateInt(group_number, 1, numberOfGroups) THEN
+        group_number = 1
+    ENDIF
+    IF NOT validateInt(index, 0, $SCR.$MAXNUMUFRAM) THEN
+        RETURN($GROUP[group_number].$UFRAME)
+    ENDIF
+    RETURN($MNUFRAME[group_number, index])
+END userFrameOf
+
+
+-- Sets the specified numeric register by a integer value.
+-- @param index             The index at which the numberic register to set.
+-- @param value             An integer representation.
+ROUTINE setIntReg(index: INTEGER; value: INTEGER)
+BEGIN
+    SET_INT_REG(index, value, status)
+END setIntReg
+
+
+-- Sets the specified numeric register by a integer value.
+-- @param index             The index at which the numberic register to set.
+-- @param value             An integer representation.
+ROUTINE setRealReg(index: INTEGER; value: REAL)
+BEGIN
+    SET_REAL_REG(index, value, status)
+END setRealReg
+
+
+-- Sets the specified position register by a position value.
+-- @param index             The index at which the position register to set.
+-- @param value             A position representation.
+-- @param group_number      The index of robot group in the position register at which to set.
+ROUTINE setPosnReg(index: INTEGER; value: POSITION; group_number: INTEGER)
+BEGIN
+    IF group_number = 0 THEN
+        group_number = 1
+    ENDIF
+    SET_POS_REG(index, value, status, group_number)
+END setPosnReg
+
+
+-- Sets the specified string register by a string value.
+-- @param index             The index at which the string register to set.
+-- @param value             A string representation.
+ROUTINE setStrReg(index: INTEGER; value: STRING)
+BEGIN
+    SET_STR_REG(index, value, status)
+END setStrReg
+
+
+-- Returns the integer value of the specified numeric register.
+-- @param index             The index at which the numberic register to get.
+ROUTINE getIntReg(index: INTEGER): INTEGER
+VAR
+    boolean_: BOOLEAN
+    int_: INTEGER
+    real_: REAL
+BEGIN
+    GET_REG(index, boolean_, int_, real_, status)
+    RETURN(int_)
+END getIntReg
+
+
+-- Returns the real value of the specified numeric register.
+-- @param index             The index at which the numberic register to get.
+ROUTINE getRealReg(index: INTEGER): REAL
+VAR
+    boolean_: BOOLEAN
+    int_: INTEGER
+    real_: REAL
+BEGIN
+    GET_REG(index, boolean_, int_, real_, status)
+    RETURN(real_)
+END getRealReg
+
+
+-- Returns the position value of the specified position register.
+-- @param index             The index at which the position register to get.
+-- @param group_number       The index of robot group in the position register at which to get.
+ROUTINE getPosnReg(index: INTEGER; group_number: INTEGER): POSITION
+BEGIN
+    IF group_number = 0 THEN
+        group_number = 1
+    ENDIF
+    RETURN(GET_POS_REG(index, status, group_number))
+END getPosnReg
+
+
+-- Clears the specified position register.
+-- @param index             The index at which the position register to clear.
+-- @param group_number      The index of robot group in the position register at which to clear.
+ROUTINE clearPosnReg(index: INTEGER; group_number: INTEGER)
+BEGIN
+    IF group_number = 0 THEN
+        group_number = 1
+    ENDIF
+    CLR_POS_REG(index, group_number, status)
+END clearPosnReg
+
+
+-- #Routine <Parameter>
+-- ------------------------------------------------------------------------------------------------
+-- Returns the parameter at the specified location.
+-- @param index             The one-based index of the desired parameter.
+ROUTINE intParamAt(index: INTEGER): INTEGER
+VAR
+    data_type_: INTEGER
+    int_: INTEGER
+    real_: REAL
+    string_: STRING[254]
+BEGIN
+    GET_TPE_PRM(index, data_type_, int_, real_, string_, status)
+    RETURN(int_)
+END intParamAt
+
+
+-- Returns the real parameter at the specified location.
+-- @param index             The one-based index of the desired parameter.
+ROUTINE realParamAt(index: INTEGER): REAL
+VAR
+    data_type_: INTEGER
+    int_: INTEGER
+    real_: REAL
+    string_: STRING[254]
+BEGIN
+    GET_TPE_PRM(index, data_type_, int_, real_, string_, status)
+    RETURN(real_)
+END realParamAt
+
+
+-- Returns the string parameter at the specified location.
+-- @param index             The one-based index of the desired parameter.
+ROUTINE stringParamAt(index: INTEGER): STRING
+VAR
+    data_type_: INTEGER
+    int_: INTEGER
+    real_: REAL
+    string_: STRING[254]
+BEGIN
+    GET_TPE_PRM(index, data_type_, int_, real_, string_, status)
+    RETURN(string_)
+END stringParamAt
+
+
+
+
+-- #Main
+-- ------------------------------------------------------------------------------------------------
+BEGIN
+END utils_robot

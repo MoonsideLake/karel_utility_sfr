@@ -1,0 +1,299 @@
+-- ------------------------------------------------------------------------------------------------
+-- SHANGHAI-FANUC Robotics retains rights in any and all software contained in material attached
+-- herein. Software may not be copied, used, reproduced or transmitted in whole or in part in any way
+-- without written permission of SHANGHAI-FANUC Robotics.
+--
+--           All Software Reserved
+--           Copyright(C) 2020
+--           SHANGHAI-FANUC Robotics Co., Ltd
+--
+-- Program Name:        utils_file.kl
+-- Description:         KAREL extension routine (File)
+-- Controller version:  V9.00
+-- 
+-- Authors:             SHANGHAI-FANUC Robotics Co., Ltd
+--                      No. 1500 Fulian Road, Baoshan District, Shanghai 201906
+-- ------------------------------------------------------------------------------------------------
+PROGRAM utils_file
+
+%COMMENT = 'Ver01.00'
+%STACKSIZE = 4000
+%INVISIBLE
+%RWACCESS
+
+
+
+
+%INCLUDE /extension/enum_error
+
+
+
+
+TYPE
+    TEXT_FORMAT_T = STRUCTURE
+        formatted:      BOOLEAN
+        field_length:   INTEGER
+        specifier:      INTEGER
+        terminator:     INTEGER
+    ENDSTRUCTURE
+
+
+
+
+CONST
+    -- predefined text format formatted mark
+    BINARY_FORMAT = FALSE
+    ASCII_FORMAT  = TRUE
+
+    -- predefined text format field length
+    DISABLE_FIELD = 0
+    BYTE_FIELD    = 1
+    WORD_FIELD    = 2
+    DWORD_FIELD   = 4
+    HALF_FIELD    = 127
+    MAX_FIELD     = 254
+
+    -- predefined text format specifier
+    DISABLE_SPECIFIER = 0
+    -- radix
+    BIN_SYSTEM     = 2
+    OCT_SYSTEM     = 8
+    DEC_SYSTEM     = 10
+    HEX_SYSTEM     = 16
+    -- precision
+    MAX_DECIMAL    = 12
+    MAX_SCIENTIFIC = -6
+    -- alignment
+    ALIGN_LEFT  = 0
+    ALIGN_RIGHT = 1
+
+    -- predefined terminator of ascii text format
+    DISABLE_TERMINATOR = -1
+
+    -- predefined timeout mode of file attribute
+    KEEP_ALIVED = 0
+
+    -- predefined read ahead buffer size of file attribute
+    DISABLE_AHEAD_BUFFER = 0
+    MAX_AHEAD_BUFFER     = 8
+
+
+
+
+
+-- #Routine <File>
+-- ------------------------------------------------------------------------------------------------
+-- Assigns to a text format object based on the arguments.
+-- @param this              A text format object.
+-- @param form              Specifies whether to format ASCII text or unformatted binary text.
+-- @param field_length      Indicates the variable field length of a individual text for a file read-write operation. If it's zero, the field length is disabled, 
+--                          and the field length of a individual text is determined by the variable type.
+-- @param specifier         Indicates the format descriptor of a individual text for a file read-write operation. If it's zero, the specifier is disabled. 
+--                          For integers, indicates the radix of the integer. For reals, indicates the precision of the real number. For strings, indicates alignment.
+-- @param terminator        Indicates the termination character code of a individual text. If it's negative one, the terminator is disabled. Works only on formatted ASCII text.
+ROUTINE setTextFormat(this: TEXT_FORMAT_T; formatted: BOOLEAN; field_length: INTEGER; specifier: INTEGER; terminator: INTEGER)
+BEGIN
+    this.formatted = formatted
+    this.field_length = field_length
+    this.specifier = specifier
+    this.terminator = terminator
+END setTextFormat
+
+
+-- Sets details of file operation based on the arguments.
+-- @param this              A file variable.
+-- @param text_format       Indicates the text format for file read-write operation.
+-- @param timeout           Indicates the inactivity timeout in ms for file read-write operation. If it's zero, the timeout is disabled.
+-- @param ahead_buffer      Indicates the size of a read-ahead buffer in a unit of 128 bytes. It allows to check instantly if source has been received.
+ROUTINE setFileAttribute(this: FILE; text_format: TEXT_FORMAT_T; timeout: INTEGER; ahead_buffer: INTEGER)
+BEGIN
+    IF text_format.formatted AND (text_format.field_length > DISABLE_FIELD) THEN
+        SET_FILE_ATR(this, ATR_FIELD)
+    ENDIF
+    IF text_format.formatted AND (text_format.field_length <= DISABLE_FIELD) THEN
+        SET_FILE_ATR(this, ATR_EOL, text_format.terminator)
+    ENDIF
+    IF NOT text_format.formatted THEN
+        SET_FILE_ATR(this, ATR_UF)
+        SET_FILE_ATR(this, ATR_FIELD)
+    ENDIF
+    SET_FILE_ATR(this, ATR_TIMEOUT, timeout)
+    SET_FILE_ATR(this, ATR_READAHD, ahead_buffer)
+    SET_FILE_ATR(this, ATR_IA)
+END setFileAttribute
+
+
+-- Writes integer data.
+-- @param this              A file variable.
+-- @param text_format       Indicates the text format for file read-write operation.
+-- @param source            A integer representation.
+ROUTINE writeInt(this: FILE; text_format: TEXT_FORMAT_T; source: INTEGER)
+BEGIN
+    IF text_format.formatted AND (text_format.field_length > DISABLE_FIELD) THEN
+        WRITE this(source :: text_format.field_length :: text_format.specifier)
+    ENDIF
+    IF text_format.formatted AND (text_format.field_length <= DISABLE_FIELD) THEN
+        WRITE this(source)
+    ENDIF
+    IF text_format.formatted AND (text_format.terminator > DISABLE_TERMINATOR) THEN
+        WRITE this(CHR(text_format.terminator))
+    ENDIF
+    IF NOT text_format.formatted THEN
+        WRITE this (source :: text_format.field_length)
+    ENDIF
+END writeInt
+
+
+-- Writes real data.
+-- @param this              A file variable.
+-- @param text_format       Indicates the text format for file read-write operation.
+-- @param source            A real representation.
+ROUTINE writeReal(this: FILE; text_format: TEXT_FORMAT_T; source: REAL)
+BEGIN
+    IF text_format.formatted AND (text_format.field_length > DISABLE_FIELD) THEN
+        WRITE this(source :: text_format.field_length :: text_format.specifier)
+    ENDIF
+    IF text_format.formatted AND (text_format.field_length <= DISABLE_FIELD) THEN
+        WRITE this(source)
+    ENDIF
+    IF text_format.formatted AND (text_format.terminator > DISABLE_TERMINATOR) THEN
+        WRITE this(CHR(text_format.terminator))
+    ENDIF
+    IF NOT text_format.formatted THEN
+        WRITE this (source)
+    ENDIF
+END writeReal
+
+
+-- Writes boolean data.
+-- @param this              A file variable.
+-- @param text_format       Indicates the text format for file read-write operation.
+-- @param source            A boolean representation.
+ROUTINE writeBoolean(this: FILE; text_format: TEXT_FORMAT_T; source: BOOLEAN)
+BEGIN
+    IF text_format.formatted AND (text_format.field_length > DISABLE_FIELD) THEN
+        WRITE this(source :: text_format.field_length :: text_format.specifier)
+    ENDIF
+    IF text_format.formatted AND (text_format.field_length <= DISABLE_FIELD) THEN
+        WRITE this(source)
+    ENDIF
+    IF text_format.formatted AND (text_format.terminator > DISABLE_TERMINATOR) THEN
+        WRITE this(CHR(text_format.terminator))
+    ENDIF
+    IF NOT text_format.formatted THEN
+        WRITE this (source :: text_format.field_length)
+    ENDIF
+END writeBoolean
+
+
+-- Writes string data.
+-- @param this              A file variable.
+-- @param text_format       Indicates the text format for file read-write operation.
+-- @param source            A string representation.
+ROUTINE writeString(this: FILE; text_format: TEXT_FORMAT_T; source: STRING)
+BEGIN
+    IF text_format.formatted AND (text_format.field_length > DISABLE_FIELD) THEN
+        WRITE this(source :: text_format.field_length :: text_format.specifier)
+    ENDIF
+    IF text_format.formatted AND (text_format.field_length <= DISABLE_FIELD) THEN
+        WRITE this(source)
+    ENDIF
+    IF text_format.formatted AND (text_format.terminator > DISABLE_TERMINATOR) THEN
+        WRITE this(CHR(text_format.terminator))
+    ENDIF
+    IF NOT text_format.formatted THEN
+        WRITE this (source :: text_format.field_length)
+    ENDIF
+END writeString
+
+
+-- Reads integer data.
+-- @param this              A file variable.
+-- @param text_format       Indicates the text format for file read-write operation.
+-- @param target            A integer variable.
+ROUTINE readInt(this: FILE; text_format: TEXT_FORMAT_T; target: INTEGER)
+VAR
+    separator_: STRING[1]
+BEGIN
+    IF text_format.formatted AND (text_format.field_length > DISABLE_FIELD) THEN
+        READ this(target :: text_format.field_length :: text_format.specifier)
+        READ this(separator_ :: 1)
+    ENDIF
+    IF text_format.formatted AND (text_format.field_length <= DISABLE_FIELD) THEN
+        READ this(target)
+    ENDIF
+    IF NOT text_format.formatted THEN
+        READ this(target :: text_format.field_length)
+    ENDIF
+END readInt
+
+
+-- Reads real data.
+-- @param this              A file variable.
+-- @param text_format       Indicates the text format for file read-write operation.
+-- @param target            A real variable.
+ROUTINE readReal(this: FILE; text_format: TEXT_FORMAT_T; target: REAL)
+VAR
+    separator_: STRING[1]
+BEGIN
+    IF text_format.formatted AND (text_format.field_length > DISABLE_FIELD) THEN
+        READ this(target :: text_format.field_length)
+        READ this(separator_ :: 1)
+    ENDIF
+    IF text_format.formatted AND (text_format.field_length <= DISABLE_FIELD) THEN
+        READ this(target)
+    ENDIF
+    IF NOT text_format.formatted THEN
+        READ this(target)
+    ENDIF
+END readReal
+
+
+-- Reads boolean data.
+-- @param this              A file variable.
+-- @param text_format       Indicates the text format for file read-write operation.
+-- @param target            A boolean variable.
+ROUTINE readBoolean(this: FILE; text_format: TEXT_FORMAT_T; target: BOOLEAN)
+VAR
+    separator_: STRING[1]
+BEGIN
+    IF text_format.formatted AND (text_format.field_length > DISABLE_FIELD) THEN
+        READ this(target :: text_format.field_length)
+        READ this(separator_ :: 1)
+    ENDIF
+    IF text_format.formatted AND (text_format.field_length <= DISABLE_FIELD) THEN
+        READ this(target)
+    ENDIF
+    IF NOT text_format.formatted THEN
+        READ this(target :: text_format.field_length)
+    ENDIF
+END readBoolean
+
+
+-- Reads string data.
+-- @param this              A file variable.
+-- @param text_format       Indicates the text format for file read-write operation.
+-- @param target            A string variable.
+ROUTINE readString(this: FILE; TEXT_FORMAT: TEXT_FORMAT_T; target: STRING)
+VAR
+    separator_: STRING[1]
+BEGIN
+    IF text_format.formatted AND (text_format.field_length > DISABLE_FIELD) THEN
+        READ this(target :: text_format.field_length :: text_format.specifier)
+        READ this(separator_ :: 1)
+    ENDIF
+    IF text_format.formatted AND (text_format.field_length <= DISABLE_FIELD) THEN
+        READ this(target)
+    ENDIF
+    IF NOT text_format.formatted THEN
+        READ this(target :: text_format.field_length)
+    ENDIF
+END readString
+
+
+
+
+-- #Main
+-- ------------------------------------------------------------------------------------------------
+BEGIN
+END utils_file

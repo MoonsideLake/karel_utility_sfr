@@ -1,0 +1,262 @@
+-- ------------------------------------------------------------------------------------------------
+-- SHANGHAI-FANUC Robotics retains rights in any and all software contained in material attached
+-- herein. Software may not be copied, used, reproduced or transmitted in whole or in part in any way
+-- without written permission of SHANGHAI-FANUC Robotics.
+--
+--           All Software Reserved
+--           Copyright(C) 2020
+--           SHANGHAI-FANUC Robotics Co., Ltd
+--
+-- Program Name:        utils_array.kl
+-- Description:         KAREL extension routine (Array)
+-- Controller version:  V9.00
+-- 
+-- Authors:             SHANGHAI-FANUC Robotics Co., Ltd
+--                      No. 1500 Fulian Road, Baoshan District, Shanghai 201906
+-- ------------------------------------------------------------------------------------------------
+PROGRAM utils_array
+
+%COMMENT = 'Ver01.00'
+%STACKSIZE = 4000
+%INVISIBLE
+%RWACCESS
+
+
+
+%INCLUDE /extension/enum_error
+
+CONST
+    ASCENDING_ORDER  = FALSE
+    DESCENDING_ORDER = TRUE
+	
+
+
+
+%INCLUDE /extension/utils_system
+
+
+-- #Routine <Number>
+-- ------------------------------------------------------------------------------------------------
+-- Fills the elements section identified by start and end with value.
+-- @param ints              An array of integers.
+-- @param value             A integer representation to fill array section with.
+-- @param start             The index to start filling the array at. If it's zero, filling starts at the beginning of the array.
+-- @param end               The index to stop filling the array at. If it's zero, filling stops until the ending of the array.
+ROUTINE fillIntWith(ints: ARRAY OF INTEGER; value: INTEGER; start: INTEGER; over: INTEGER)
+VAR
+    i_: INTEGER
+BEGIN
+    IF start = 0 THEN
+        start = 1
+    ENDIF
+    IF over = 0 THEN
+        over = ARRAY_LEN(ints)
+    ENDIF
+    FOR i_ = start TO over DO
+        setInt(ints[i_], value)
+    ENDFOR
+END fillIntWith
+
+
+-- Fills the elements section identified by start and end with value.
+-- @param reals             An array of reals.
+-- @param value             A real representation to fill array section with.
+-- @param start             The index to start filling the array at. If it's zero, filling starts at the beginning of the array.
+-- @param end               The index to stop filling the array at. If it's zero, filling stops until the ending of the array.
+ROUTINE fillRealWith(reals: ARRAY OF REAL; value: REAL; start: INTEGER; over: INTEGER)
+VAR
+    i_: INTEGER
+BEGIN
+    IF start = 0 THEN
+        start = 1
+    ENDIF
+    IF over = 0 THEN
+        over = ARRAY_LEN(reals)
+    ENDIF
+    FOR i_ = start TO over DO
+        setReal(reals[i_], value)
+    ENDFOR
+END fillRealWith
+
+
+-- Returns the index of the first occurrence of a value in an array.
+-- @param ints              An array of integers.
+-- @param value             A integer representation to search for.
+-- @param index             The array index at which to begin the search. If it's positive, forward search, if it's negative, reverse search.
+ROUTINE indexIntOf(ints: ARRAY OF INTEGER; value: INTEGER; index: INTEGER): INTEGER
+VAR
+    i_: INTEGER
+BEGIN
+    IF index = 0 THEN
+        index = 1
+    ENDIF
+    IF index > 0 THEN
+        FOR i_ = index TO ARRAY_LEN(ints) DO
+            IF compareInt(ints[i_], value) THEN
+                RETURN(i_)
+            ENDIF
+        ENDFOR
+    ELSE
+        FOR i_ = ABS(index) DOWNTO 1 DO
+            IF compareInt(ints[i_], value) THEN
+                RETURN(i_)
+            ENDIF
+        ENDFOR
+    ENDIF
+    RETURN(0)
+END indexIntOf
+
+
+-- Returns the index of the first occurrence of a value in an array.
+-- @param reals             An array of reals.
+-- @param value             A real representation to search for.
+-- @param index             The array index at which to begin the search. If it's positive, forward search, if it's negative, reverse search.
+ROUTINE indexRealOf(reals: ARRAY OF REAL; value: REAL; index: INTEGER): INTEGER
+VAR
+    i_: INTEGER
+BEGIN
+    IF index = 0 THEN
+        index = 1
+    ENDIF
+    IF index > 0 THEN
+        FOR i_ = index TO ARRAY_LEN(reals) DO
+            IF compareReal(reals[i_], value) THEN
+                RETURN(i_)
+            ENDIF
+        ENDFOR
+    ELSE
+        FOR i_ = ABS(index) DOWNTO 1 DO
+            IF compareReal(reals[i_], value) THEN
+                RETURN(i_)
+            ENDIF
+        ENDFOR
+    ENDIF
+    RETURN(0)
+END indexRealOf
+
+
+-- Returns a new array containing all elements that are equal to the search integer.
+-- @param ints              An array of integers to find elements.
+-- @param search_int        The element integer to search for in the array.
+-- @param new_ints          The set of integers used to store found elements.
+ROUTINE findIntOf(ints: ARRAY OF INTEGER; search_int: INTEGER; new_ints: ARRAY OF INTEGER)
+VAR
+    i_: INTEGER
+    j_: INTEGER
+    uninit_int_: INTEGER
+BEGIN
+    IF UNINIT(search_int) THEN
+        new_ints = ints
+        RETURN
+    ENDIF
+    fillIntWith(new_ints, uninit_int_, 0, 0)
+    j_ = 0
+    FOR i_ = 1 TO ARRAY_LEN(ints) DO
+        IF compareInt(ints[i_], search_int) THEN
+            new_ints[inc(j_)] = ints[i_]
+        ENDIF
+    ENDFOR
+END findIntOf
+
+
+-- Returns a new array containing all elements that are equal to the search integer.
+-- @param reals             An array of reals to filter.
+-- @param search_string     The element real to search for in the array.
+-- @param new_reals         The set of reals used to store found elements.
+ROUTINE findRealOf(reals: ARRAY OF REAL; search_real: REAL; new_reals: ARRAY OF REAL)
+VAR
+    i_: INTEGER
+    j_: INTEGER
+    uninit_real_: REAL
+BEGIN
+    IF UNINIT(search_real) THEN
+        new_reals = reals
+        RETURN
+    ENDIF
+    fillRealWith(new_reals, uninit_real_, 0, 0)
+    j_ = 0
+    FOR i_ = 1 TO ARRAY_LEN(reals) DO
+        IF compareReal(reals[i_], search_real) THEN
+            new_reals[inc(j_)] = reals[i_]
+        ENDIF
+    ENDFOR
+END findRealOf
+
+
+-- Sorts the integer array according to the order.
+-- @param ints              An array of integers to sort by order.
+-- @param order             Indicates the sort order. If it's false, in ascending order. Otherwise, in descending order.
+-- @param indexes           An array that stores the indexes of the original array elements by order.
+ROUTINE sortIntBy(ints: ARRAY OF INTEGER; order: BOOLEAN; indexes: ARRAY OF INTEGER)
+VAR
+    i_: INTEGER
+    j_: INTEGER
+BEGIN
+    FOR i_ = 1 TO ARRAY_LEN(ints) DO
+        indexes[i_] = i_
+    ENDFOR
+    FOR i_ = 1 TO ARRAY_LEN(ints) DO
+        FOR j_ = 1 TO ARRAY_LEN(ints) - i_ DO
+            IF (ints[j_] < ints[j_ + 1]) = order THEN
+                swapInt(ints[j_], ints[j_ + 1])
+                swapInt(indexes[j_], indexes[j_ + 1])
+            ENDIF
+        ENDFOR
+    ENDFOR
+END sortIntBy
+
+
+-- Sorts the real array according to the order.
+-- @param reals             An array of reals to sort by order.
+-- @param order             Indicates the sort order. If it's false, in ascending order. Otherwise, in descending order.
+-- @param indexes           An array that stores the indexes of the original array elements by order.
+ROUTINE sortRealBy(reals: ARRAY OF REAL; order: BOOLEAN; indexes: ARRAY OF INTEGER)
+VAR
+    i_: INTEGER
+    j_: INTEGER
+BEGIN
+    FOR i_ = 1 TO ARRAY_LEN(reals) DO
+        indexes[i_] = i_
+    ENDFOR
+    FOR i_ = 1 TO ARRAY_LEN(reals) DO
+        FOR j_ = 1 TO ARRAY_LEN(reals) - i_ DO
+            IF (reals[j_] < reals[j_ + 1]) = order THEN
+                swapReal(reals[j_], reals[j_ + 1])
+                swapInt(indexes[j_], indexes[j_ + 1])
+            ENDIF
+        ENDFOR
+    ENDFOR
+END sortRealBy
+
+
+
+
+-- #Routine <Position>
+-- ------------------------------------------------------------------------------------------------
+-- Copies an elements section from identified by start and end to the same array starting at target position.
+-- @param these             An array of positions.
+-- @param target            The specified target index location.
+-- @param start             The specified starting position of an elements section to copy. If it's zero, it starts at the beginning of the array.
+-- @param over              The specified ending position of an elements section to copy. If it's zero, it continues to the end of array.
+ROUTINE copyPosnWithin(posns: ARRAY OF POSITION; target: INTEGER; start: INTEGER; over: INTEGER)
+VAR
+    i_: INTEGER
+BEGIN
+    IF start = 0 THEN
+        start = 1
+    ENDIF
+    IF over = 0 THEN
+        over = ARRAY_LEN(posns)
+    ENDIF
+    FOR i_ = 0 TO over - start DO
+        posns[target + i_] = posns[start + i_]
+    ENDFOR
+END copyPosnWithin
+
+
+
+
+-- Main Program
+-- ------------------------------------------------------------------------------------------------
+BEGIN
+END utils_array

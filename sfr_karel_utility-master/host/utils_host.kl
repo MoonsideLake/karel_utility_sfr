@@ -1,0 +1,135 @@
+-- ------------------------------------------------------------------------------------------------ 
+-- SHANGHAI-FANUC Robotics retains rights in any and all software contained in the material attached
+-- herein. Software may not be copied, used, reproduced or transmitted in whole or in part in any way
+-- without the written permission of SHANGHAI-FANUC Robotics.
+--
+--           All Software Reserved
+--           Copyright(C) 2021
+--           SHANGHAI-FANUC Robotics Co., Ltd
+--
+-- Program Name:        utils_host.kl
+-- Description:  		KAREL extension routine (Host Communication Operation)
+-- Controller version:  V9.00
+-- 
+-- Authors:             SHANGHAI-FANUC Robotics Co., Ltd
+--                      No. 1500 Fulian Road, Baoshan District, Shanghai 201906
+-- ------------------------------------------------------------------------------------------------
+PROGRAM utils_host
+
+%COMMENT = 'Ver01.00'
+%STACKSIZE = 4000
+%INVISIBLE
+%RWACCESS
+
+
+
+
+%INCLUDE /extension/enum_error
+
+
+
+
+-- #Routine <Socket Message>
+-- ------------------------------------------------------------------------------------------------
+-- Determines whether the timer times out
+-- @param timing            A interval timer variable that measures time in milliseconds.
+-- @param interval          Indicates the scan interval in milliseconds.
+-- @param limit             Indicates the amount of time in milliseconds that the process returns a limit.
+ROUTINE timeOut(timing: INTEGER; interval: INTEGER; limit: INTEGER): BOOLEAN
+BEGIN
+    IF timing >= limit THEN
+        timing = 0
+        RETURN(TRUE)
+    ENDIF
+    timing = timing + interval
+    DELAY(interval)
+    RETURN(FALSE)
+END timeOut
+
+
+-- Connects valid host tag of socket message until the timer times out.
+-- @param tag_name          A string representation of the socket tag to connect.
+-- @param interval          Indicates the scan interval of a listening cycle in milliseconds. It must be positive.
+-- @param limit             Indicates the amount of time in milliseconds that the listening process cycle stop. If it's zero, the limit is disabled.
+ROUTINE connectTag(tag_name: STRING; interval: INTEGER; limit: INTEGER)
+VAR
+    timing_: INTEGER
+    status_: INTEGER
+BEGIN
+    timing_ = 0
+    REPEAT
+        MSG_CONNECT(tag_name, status_)
+        IF status_ = 0 THEN
+        	RETURN
+        ENDIF
+        IF timeOut(timing_, interval, limit) THEN
+            POST_ERR(status_, '', 0, ERROR_GLOBAL_ABORT)
+        ENDIF
+    UNTIL(status_ = 0)
+END connectTag
+
+
+-- Disconnects valid host tag of socket until the timer times out.
+-- @param tag_name          A string representation of the socket tag to disconnect.
+-- @param interval          Indicates the scan interval of a listening cycle in milliseconds. It must be positive.
+-- @param limit             Indicates the amount of time in milliseconds that the listening process cycle stop. If it's zero, the limit is disabled.
+ROUTINE disconnectTag(tag_name: STRING; interval: INTEGER; limit: INTEGER)
+VAR
+    timing_: INTEGER
+    status_: INTEGER
+BEGIN
+    timing_ = 0
+    REPEAT
+        MSG_DISCO(tag_name, status_)
+        IF status_ = 0 THEN
+        	RETURN
+        ENDIF
+        IF timeOut(timing_, interval, limit) THEN
+            POST_ERR(status_, '', 0, ERROR_GLOBAL_ABORT)
+        ENDIF
+    UNTIL(status_ = 0)
+END disconnectTag
+
+
+-- Listens to the file cache corresponding to the host tag of socket until the timer times out.
+-- @param socket            An operation file corresponding to the socket tag.
+-- @param interval          Indicates the scan interval of a listening cycle in milliseconds. It must be positive.
+-- @param limit             Indicates the amount of time in milliseconds that the listening process cycle stop. If it's zero, the limit is disabled.
+ROUTINE listen(socket: FILE; interval: INTEGER; limit: INTEGER)
+VAR
+    timing_: INTEGER
+    number_bytes_: INTEGER
+    status_: INTEGER
+BEGIN
+    timing_ = 0
+    REPEAT
+        BYTES_AHEAD(socket, number_bytes_, status_)
+		IF status_ = 0 THEN
+			IF number_bytes_ > 0 THEN
+        		RETURN
+			ENDIF
+            IF timeOut(timing_, interval, limit) THEN
+                POST_ERR(67135, '', 0, ERROR_GLOBAL_ABORT)
+            ENDIF
+        ELSE
+            POST_ERR(status_, '', 0, ERROR_GLOBAL_ABORT)
+    	ENDIF
+    UNTIL(number_bytes_ > 0)
+END listen
+
+
+-- Clears the file cache corresponding to the host tag of socket.
+-- @param tag_name          A string representation of the socket tag to clear buffer.
+ROUTINE clearBuffer(tag_name: STRING)
+BEGIN
+    disconnectTag(tag_name, 0, 0)
+    connectTag(tag_name, 0, 0)
+END clearBuffer
+
+
+
+
+-- #Main
+-- ------------------------------------------------------------------------------------------------
+BEGIN
+END utils_host

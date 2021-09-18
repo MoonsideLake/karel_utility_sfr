@@ -1,0 +1,664 @@
+-- ------------------------------------------------------------------------------------------------
+-- SHANGHAI-FANUC Robotics retains rights in any and all software contained in material attached
+-- herein. Software may not be copied, used, reproduced or transmitted in whole or in part in any way
+-- without written permission of SHANGHAI-FANUC Robotics.
+--
+--           All Software Reserved
+--           Copyright(C) 2020
+--           SHANGHAI-FANUC Robotics Co., Ltd
+--
+-- Program Name:        _system.kl
+-- Description:         KAREL extension routine (System)
+-- Controller version:  V9.00
+-- 
+-- Authors:             SHANGHAI-FANUC Robotics Co., Ltd
+--                      No. 1500 Fulian Road, Baoshan District, Shanghai 201906
+-- ------------------------------------------------------------------------------------------------
+PROGRAM _system
+
+%COMMENT = 'Ver01.00'
+%STACKSIZE = 4000
+%INVISIBLE
+%RWACCESS
+
+
+
+
+%INCLUDE /extension/enum_error
+
+
+
+
+VAR
+    uninit_int: INTEGER
+    uninit_real: REAL
+    uninit_bool: BOOLEAN
+    uninit_string: STRING[254]
+    uninit_vector: VECTOR
+    uninit_coord: XYZWPR
+    uninit_posn: POSITION
+    uninit_jposn: JOINTPOS
+
+    status: INTEGER
+
+
+
+
+%INCLUDE /extension/_math
+
+-- #Routine <Operator>
+-- ------------------------------------------------------------------------------------------------
+-- Returns the bitwise XOR result of two integers.
+-- @param x                 An integer representation.
+-- @param y                 An integer representation.
+ROUTINE xor(x: INTEGER; y: INTEGER): INTEGER
+BEGIN
+    RETURN((x OR y) AND (NOT x OR NOT y))
+END xor
+
+
+-- Returns the integer representation of bit shift left.
+-- @param x                 An integer representation.
+-- @param n                 The number of bits shifted to the left.
+ROUTINE lsh(x: INTEGER; n: INTEGER): INTEGER
+BEGIN 
+    RETURN(x * TRUNC(EXP(LN(2) * n)))
+END lsh
+
+
+-- Returns the integer representation of bit shift right.
+-- @param x                 An integer representation.
+-- @param n                 The number of bits shifted to the right.
+ROUTINE rsh(x: INTEGER; n: INTEGER): INTEGER
+BEGIN
+    IF x >= 0 THEN
+        RETURN(x DIV TRUNC(EXP(LN(2) * n)))
+    ELSE
+        RETURN(NOT rsh(NOT x + 1, n))
+    ENDIF
+END rsh
+
+
+-- Returns the value after increasing by one.
+-- @param x                 An integer representation.
+ROUTINE inc(x: INTEGER): INTEGER
+BEGIN
+    x = x + 1
+    RETURN(x)
+END inc
+
+
+-- Returns the value after decreasing by one.
+-- @param x                 An integer representation.
+ROUTINE dec(x: INTEGER): INTEGER
+BEGIN
+    x = x - 1
+    RETURN(x)
+END dec
+
+
+
+
+-- #Routine <Number>
+-- ------------------------------------------------------------------------------------------------
+-- Assigns a value to a integer variable.
+-- @param x                 A integer variable.
+-- @param value             A integer representation.
+ROUTINE setInt(x: INTEGER; value: INTEGER)
+VAR
+    entry_: INTEGER
+BEGIN
+    IF UNINIT(value) THEN
+        GET_VAR(entry_, 'utils_system', 'uninit_int', x, status)
+        RETURN
+    ENDIF
+    x = value
+END setInt
+
+
+-- Assigns a value to a integer variable.
+-- @param x                 A integer variable.
+-- @param value             A integer representation.
+ROUTINE setReal(x: REAL; value: REAL)
+VAR
+    entry_: INTEGER
+BEGIN
+    IF UNINIT(value) THEN
+        GET_VAR(entry_, 'utils_system', 'uninit_real', x, status)
+        RETURN
+    ENDIF
+    x = value
+END setReal
+
+
+-- Determines whether two integers are equal, including the uninitialized state.
+-- @param x                 A integer variable.
+-- @param y                 A integer variable.
+ROUTINE compareInt(x: INTEGER; y: INTEGER): BOOLEAN
+BEGIN
+    IF UNINIT(x) AND UNINIT(y) THEN
+        RETURN(TRUE)
+    ENDIF
+    IF UNINIT(x) OR UNINIT(y) THEN
+        RETURN(FALSE)
+    ENDIF
+    IF (NOT UNINIT(x) AND NOT UNINIT(y)) AND (x = y) THEN
+        RETURN(TRUE)
+    ENDIF
+    RETURN(FALSE)
+END compareInt
+
+
+-- Determines whether two reals are equal, including the uninitialized state.
+-- @param x                 A real variable.
+-- @param y                 A real variable.
+ROUTINE compareReal(x: REAL; y: REAL): BOOLEAN
+BEGIN
+    IF UNINIT(x) AND UNINIT(y) THEN
+        RETURN(TRUE)
+    ENDIF
+    IF UNINIT(x) OR UNINIT(y) THEN
+        RETURN(FALSE)
+    ENDIF
+    IF (NOT UNINIT(x) AND NOT UNINIT(y)) AND (x = y) THEN
+        RETURN(TRUE)
+    ENDIF
+    RETURN(FALSE)
+END compareReal
+
+
+-- Swaps two integer variables.
+-- @param x                 An integer variable.
+-- @param y                 An integer variable.
+ROUTINE swapInt(x: INTEGER; y: INTEGER)
+VAR
+    temp_: INTEGER
+BEGIN
+    IF NOT UNINIT(x) AND NOT UNINIT(y) THEN
+        temp_ = y
+        y = x
+        x = temp_
+    ENDIF
+    IF UNINIT(x) AND NOT UNINIT(y) THEN
+        x = y
+        setInt(y, temp_)
+    ENDIF
+    IF NOT UNINIT(x) AND UNINIT(y) THEN
+        y = x
+        setInt(x, temp_)
+    ENDIF
+END swapInt
+
+
+-- Swaps two real variables.
+-- @param x                 An real variable.
+-- @param y                 An real variable.
+ROUTINE swapReal(x: REAL; y: REAL)
+VAR
+    temp_: REAL
+BEGIN
+    IF NOT UNINIT(x) AND NOT UNINIT(y) THEN
+        temp_ = y
+        y = x
+        x = temp_
+    ENDIF
+    IF UNINIT(x) AND NOT UNINIT(y) THEN
+        x = y
+        setReal(y, temp_)
+    ENDIF
+    IF NOT UNINIT(x) AND UNINIT(y) THEN
+        y = x
+        setReal(x, temp_)
+    ENDIF
+END swapReal
+
+
+-- Returns a string representation of an integer.
+-- @param x                 An integer representation.
+-- @param radix             The radix for converting numeric values to strings.
+ROUTINE toString(x: INTEGER; radix: INTEGER): STRING
+VAR
+    string_: STRING[254]
+BEGIN
+    CNV_INT_STR(x, 2, radix, string_)
+    RETURN(SUB_STR(string_, 2, STR_LEN(string_) - 1))
+END toString
+
+
+-- Returns a string containing a number represented either in exponential or fixed-point notation with a specified number of digits.
+-- @param x                 A real representation.
+-- @param precision         The number of significant digits. Must be in the range -6 - 6, inclusive. 
+ROUTINE toPrecision(x: REAL; precision: INTEGER): STRING
+VAR
+    string_: STRING[254]
+BEGIN
+    CNV_REAL_STR(x, 2, precision, string_)
+    RETURN(SUB_STR(string_, 2, STR_LEN(string_) - 1))
+END toPrecision
+
+
+-- Determines whether a integer is between the upper and lower limits.
+-- @param x                 An integer representation.
+-- @param lower_limit       The lower limit of a integer.
+-- @param upper_limit       The upper limit of a integer.
+ROUTINE validateInt(x: INTEGER; lower_limit: INTEGER; upper_limit: INTEGER): BOOLEAN
+BEGIN
+    RETURN((lower_limit <= x) AND (x <= upper_limit))
+END validateInt
+
+
+-- Determines whether a real is between the upper and lower limits.
+-- @param x                 A real representation.
+-- @param lower_limit       The lower limit of a real.
+-- @param upper_limit       The upper limit of a real.
+ROUTINE validateReal(x: REAL; lower_limit: REAL; upper_limit: REAL): BOOLEAN
+BEGIN
+    RETURN((lower_limit <= x) AND (x <= upper_limit)) 
+END validateReal
+
+
+-- Returns an integer that is limited to a range.
+-- @param x                 An integer representation.
+-- @param lower_limit       The lower limit of a integer.
+-- @param upper_limit       The upper limit of a integer.
+ROUTINE limiterInt(x: INTEGER; lower_limit: INTEGER; upper_limit: INTEGER): INTEGER
+BEGIN
+    IF x > upper_limit THEN
+        RETURN(upper_limit)
+    ENDIF
+    IF x < lower_limit THEN
+        RETURN(lower_limit)
+    ENDIF
+    RETURN(x)
+END limiterInt
+
+
+-- Returns a real that is limited to a range.
+-- @param x                 A real representation.
+-- @param lower_limit       The lower limit of a real.
+-- @param upper_limit       The upper limit of a real.
+ROUTINE limiterReal(x: REAL; lower_limit: REAL; upper_limit: REAL): REAL
+BEGIN
+    IF x > upper_limit THEN
+        RETURN(upper_limit)
+    ENDIF
+    IF x < lower_limit THEN
+        RETURN(lower_limit)
+    ENDIF
+    RETURN(x)
+END limiterReal
+
+
+
+
+-- #Routine <String>
+-- ------------------------------------------------------------------------------------------------
+-- Determines whether a string is empty.
+-- @param chars             A string variable.
+ROUTINE isNull(chars: STRING): BOOLEAN
+BEGIN
+    RETURN(chars = '')
+END isNull
+
+
+-- Assigns a value to a string variable.
+-- @param chars             A string variable.
+-- @param value             A string representation.
+ROUTINE setString(chars: STRING; value: STRING)
+VAR
+    entry_: INTEGER
+BEGIN
+    IF UNINIT(value) THEN
+        GET_VAR(entry_, 'utils_system', 'uninit_string', chars, status)
+        RETURN
+    ENDIF
+    chars = value
+END setString
+
+
+-- Swaps two strings.
+-- @param a                 A string variable.
+-- @param b                 A string variable.
+ROUTINE swapString(a: STRING; b: STRING)
+VAR
+    temp_: STRING[254]
+BEGIN
+    IF NOT UNINIT(a) AND NOT UNINIT(b) THEN
+        temp_ = b
+        b = a
+        a = temp_
+    ENDIF
+    IF UNINIT(a) AND NOT UNINIT(b) THEN
+        a = b
+        setString(b, temp_)
+    ENDIF
+    IF NOT UNINIT(a) AND UNINIT(b) THEN
+        b = a
+        setString(a, temp_)
+    ENDIF
+END swapString
+
+
+-- Determines whether two strings are equal, including the uninitialized state.
+-- @param a                 A string variable.
+-- @param b                 A string variable.
+ROUTINE compareString(a: STRING; b: STRING): BOOLEAN
+BEGIN
+    IF UNINIT(a) AND UNINIT(b) THEN
+        RETURN(TRUE)
+    ENDIF
+    IF UNINIT(a) OR UNINIT(b) THEN
+        RETURN(FALSE)
+    ENDIF
+    IF (NOT UNINIT(a) AND NOT UNINIT(b)) AND (a = b) THEN
+        RETURN(TRUE)
+    ENDIF
+    RETURN(FALSE)
+END compareString
+        
+
+-- Converts a string to an integer.
+-- @param chars             A string representation to convert into a integer number.
+ROUTINE parseInt(chars: STRING): INTEGER
+VAR
+    i_: INTEGER
+    int_: INTEGER
+    base_: INTEGER
+    chars_: STRING[254]
+BEGIN
+    IF SUB_STR(chars, 1, 2) = '0o' THEN
+        base_ = 8
+    ELSE
+        IF SUB_STR(chars, 1, 2) = '0x' THEN
+            base_ = 16
+        ELSE
+            CNV_STR_INT(chars, int_)
+            RETURN(int_)
+        ENDIF
+    ENDIF
+    int_ = 0
+    chars_ = SUB_STR(chars, 3, STR_LEN(chars) - 2)
+    FOR i_ = 1 TO STR_LEN(chars_) DO
+        IF validateInt(ORD(SUB_STR(chars_, i_, 1), 1), 65, 70) THEN
+            int_ = int_ + ROUND((ORD(SUB_STR(chars_, i_, 1), 1) MOD 55) * power(base_, STR_LEN(chars_) - i_))
+        ENDIF
+        IF validateInt(ORD(SUB_STR(chars_, i_, 1), 1), 48, 57) THEN
+            int_ = int_ + ROUND((ORD(SUB_STR(chars_, i_, 1), 1) MOD 48) * power(base_, STR_LEN(chars_) - i_))
+        ENDIF
+    ENDFOR
+    RETURN(int_)
+END parseInt
+
+
+-- Converts a string to a real.
+-- @param chars             A string representation that contains a real number.
+ROUTINE parseReal(chars: STRING): REAL
+VAR
+    real_: REAL
+BEGIN
+    CNV_STR_REAL(chars, real_)
+    RETURN(real_)
+END parseReal
+
+
+-- Converts a string to a config.
+-- @param chars             A string representation that contains a valid config.
+ROUTINE parseConfig(chars: STRING): CONFIG
+VAR
+    config_: CONFIG
+BEGIN
+    CNV_STR_CONF(chars, config_, status)
+    RETURN(config_)
+END parseConfig
+
+
+-- Gets a substring beginning at the specified location and having the specified length.
+-- @param chars             A string representation.
+-- @param start             The starting position of the desired substring. If it's zero, it starts at the beginning of the string.
+-- @param length            The number of characters to include in the returned substring. If it's zero, an empty string is returned.
+ROUTINE subString(chars: STRING; start: INTEGER; length: INTEGER): STRING
+BEGIN
+    IF start = 0 THEN
+        start = 1
+    ENDIF
+    IF length = 0 THEN
+        RETURN('')
+    ELSE
+        RETURN(SUB_STR(chars, start, length))
+    ENDIF
+END subString
+
+
+-- Returns the character at the specified location.
+-- @param chars             A string representation.
+-- @param index             The one-based index of the desired character.
+ROUTINE charAt(chars: STRING; index: INTEGER): STRING
+BEGIN
+    RETURN(subString(chars, index, 1))
+END charAt
+
+
+-- Returns the ascii code of the character at the specified location.
+-- @param chars             A string representation.
+-- @param index             The one-based index of the desired character.
+ROUTINE charCodeAt(chars: STRING; index: INTEGER): INTEGER
+BEGIN
+    RETURN(ORD(chars, index))
+END charCodeAt
+
+
+-- Returns the location of the first occurrence of a substring.
+-- @param chars             A string representation that contains the substring.
+-- @param search_string     The substring to search for in the string.
+-- @param start             The index at which to begin searching. If it's positive, forward search, if it's negative, reverse search.
+--                          If it's zero, forward search at beginning of the string. If there is no substring match search_string, zero is returned.
+ROUTINE indexOf(chars: STRING; search_string: STRING; start: INTEGER): INTEGER
+VAR
+    i_: INTEGER
+BEGIN
+    IF start = 0 THEN
+        start = 1
+    ENDIF
+    IF start > 0 THEN
+        FOR i_ = start TO STR_LEN(chars) - STR_LEN(search_string) + 1 DO
+            IF subString(chars, i_, STR_LEN(search_string)) = search_string THEN
+                RETURN(i_)
+            ENDIF
+        ENDFOR
+    ELSE
+        FOR i_ = ABS(start) - STR_LEN(search_string) + 1 DOWNTO 1 DO
+            IF subString(chars, i_, STR_LEN(search_string)) = search_string THEN
+                RETURN(i_)
+            ENDIF
+        ENDFOR
+    ENDIF
+    RETURN(0)
+END indexOf
+
+
+-- Returns a section of a string.
+-- @param chars             A string representation.
+-- @param start             The index to the beginning of the specified portion of string. If it's greater than over, an empty string is returned.
+-- @param over              The index to the end of the specified portion of string. The substring includes the characters up to but not including
+--                          the character indicated by end. If it's zero, the substring continues to the end of string.
+ROUTINE slice(chars: STRING; start: INTEGER; over: INTEGER): STRING
+BEGIN
+    IF over = 0 THEN
+        over = STR_LEN(chars) + 1
+    ENDIF
+    IF start >= over THEN
+        RETURN('')
+    ELSE
+        RETURN(subString(chars, start, over - start))
+    ENDIF
+END slice
+
+
+-- Replaces the corresponding search string in the text with a string.
+-- @param chars             A string representation.
+-- @param search_string     The string to search for.
+-- @param new_string        The string to replace for every successful match of search string.
+ROUTINE replace(chars: STRING; search_string: STRING; new_string: STRING)
+VAR
+    i_: INTEGER
+BEGIN
+    i_ = indexOf(chars, search_string, 1)
+    REPEAT
+        chars = slice(chars, 1, i_) + new_string + slice(chars, i_ + STR_LEN(search_string), 0)
+        i_ = indexOf(chars, search_string, i_ + STR_LEN(new_string))
+    UNTIL(i_ = 0)
+END replace
+
+
+-- Removes leading and trailing blank and other white space characters from a string.
+-- @param chars             A string representation to be removed leading or trailing blank.
+ROUTINE trim(chars: STRING)
+BEGIN
+    -- Do not use recursion due to stack capacity limit.
+    WHILE charCodeAt(chars, 1) < 33 DO
+        chars = slice(chars, 2, 0)
+    ENDWHILE
+    WHILE charCodeAt(chars, STR_LEN(chars)) < 33 DO
+        chars = slice(chars, 1, STR_LEN(chars))
+    ENDWHILE
+END trim
+
+
+-- Converts all the alphabetic characters in a string to lowercase.
+-- @param chars             A string representation to convert case.
+ROUTINE toLowerCase(chars: STRING)
+VAR
+    i_: INTEGER
+    char_code_: INTEGER
+BEGIN
+    FOR i_ = 1 TO STR_LEN(chars) DO
+        char_code_ = charCodeAt(chars, i_)
+        IF (65 <= char_code_) AND (char_code_ <= 89) THEN
+            chars = slice(chars, 1, i_) + CHR(char_code_ + 32) + slice(chars, i_ + 1, 0)
+        ENDIF
+    ENDFOR
+END toLowerCase
+
+
+-- Converts all the alphabetic characters in a string to uppercase.
+-- @param chars             A string representation to convert case.
+ROUTINE toUpperCase(chars: STRING)
+VAR
+    i_: INTEGER
+    char_code_: INTEGER
+BEGIN
+    FOR i_ = 1 TO STR_LEN(chars) DO
+        char_code_ = charCodeAt(chars, i_)
+        IF (97 <= char_code_) AND (char_code_ <= 121) THEN
+            chars = slice(chars, 1, i_) + CHR(char_code_ - 32) + slice(chars, i_ + 1, 0)
+        ENDIF
+    ENDFOR
+END toUpperCase
+
+
+-- Split a string into substrings using the specified separator and put them to an array.
+-- @param chars             A string representation to split. 
+-- @param separator         The string that identifies character or characters to use in separating the string.
+-- @param strings           The set of strings used to store split substrings.
+ROUTINE split(chars: STRING; separator: STRING; strings: ARRAY OF STRING)
+VAR
+    i_: INTEGER
+    over_: INTEGER
+    start_: INTEGER
+BEGIN
+    i_ = 0
+    start_ = 1
+    REPEAT
+        over_ = indexOf(chars, separator, start_)
+        strings[inc(i_)] = slice(chars, start_, over_) 
+        start_ = over_ + STR_LEN(separator)
+    UNTIL (over_ = 0) OR (i_ = ARRAY_LEN(strings))
+END split
+
+
+
+
+-- #Routine <Position>
+-- ------------------------------------------------------------------------------------------------
+-- Assigns a value to a vector variable.
+-- @param vect              A vector variable.
+-- @param value             A vector representation.
+ROUTINE setVect(vect: VECTOR; value: VECTOR)
+VAR
+    entry_: INTEGER
+BEGIN
+    IF UNINIT(value) THEN
+        GET_VAR(entry_, 'utils_system', 'uninit_vector', vect, status)
+        RETURN
+    ENDIF
+    vect = value
+END setVect
+
+
+-- Swaps two vectors.
+-- @param a                 A vector variable.
+-- @param b                 A vector variable.
+ROUTINE swapVect(a: VECTOR; b: VECTOR)
+VAR
+    temp_: VECTOR
+BEGIN
+    IF NOT UNINIT(a) AND NOT UNINIT(b) THEN
+        temp_ = b
+        b = a
+        a = temp_
+    ENDIF
+    IF UNINIT(a) AND NOT UNINIT(b) THEN
+        a = b
+        setVect(b, temp_)
+    ENDIF
+    IF NOT UNINIT(a) AND UNINIT(b) THEN
+        b = a
+        setVect(a, temp_)
+    ENDIF
+END swapVect
+
+
+-- Assigns a value to a position variable.
+-- @param posn              A position variable.
+-- @param value             A position representation.
+ROUTINE setPosn(posn: POSITION; value: POSITION)
+VAR
+    entry_: INTEGER
+BEGIN
+    IF UNINIT(value) THEN
+        GET_VAR(entry_, 'utils_system', 'uninit_posn', posn, status)
+        RETURN
+    ENDIF
+    posn = value
+END setPosn
+
+
+-- Swaps two positions.
+-- @param a                 A position variable.
+-- @param b                 A position variable.
+ROUTINE swapPosn(a: POSITION; b: POSITION)
+VAR
+    temp_: POSITION
+BEGIN
+    IF NOT UNINIT(a) AND NOT UNINIT(b) THEN
+        temp_ = b
+        b = a
+        a = temp_
+    ENDIF
+    IF UNINIT(a) AND NOT UNINIT(b) THEN
+        a = b
+        setPosn(b, temp_)
+    ENDIF
+    IF NOT UNINIT(a) AND UNINIT(b) THEN
+        b = a
+        setPosn(a, temp_)
+    ENDIF
+END swapPosn
+
+
+
+
+-- #Main
+-- ------------------------------------------------------------------------------------------------
+BEGIN
+END utils_system

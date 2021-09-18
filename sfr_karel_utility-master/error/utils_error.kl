@@ -1,0 +1,47 @@
+-- ------------------------------------------------------------------------------------------------ 
+-- SHANGHAI-FANUC Robotics retains rights in any and all software contained in the material attached
+-- herein. Software may not be copied, used, reproduced or transmitted in whole or in part in any way
+-- without the written permission of SHANGHAI-FANUC Robotics.
+--
+--           All Software Reserved
+--           Copyright(C) 2021
+--           SHANGHAI-FANUC Robotics Co., Ltd
+--
+-- Program Name:        utils_error.kl
+-- Description:  		KAREL extension routine (Error)
+-- Controller version:  V9.00
+-- 
+-- Authors:             SHANGHAI-FANUC Robotics Co., Ltd
+--                      No. 1500 Fulian Road, Baoshan District, Shanghai 201906
+-- ------------------------------------------------------------------------------------------------
+PROGRAM utils_error
+
+%COMMENT = 'Ver01.00'
+%STACKSIZE = 4000
+%INVISIBLE
+%RWACCESS
+
+
+
+
+CONST
+   -- error sensitivity
+    ERROR_WARN          = 0
+    ERROR_GLOBAL_STOP   = 1
+    ERROR_GLOBAL_ABORT  = 2
+    ERROR_SYSTEM        = 3
+    ERROR_NONE          = 4
+    ERROR_GLOBAL_PAUSE  = 5
+    ERROR_LOCAL_PAUSE   = 6
+    ERROR_LOCAL_STOP    = 7
+    ERROR_GLOBAL_SERVO  = 8
+    ERROR_LOCAL_SERVO   = 9
+    ERROR_LOCAL_ABORT   = 10
+
+
+
+
+-- #Main
+-- ------------------------------------------------------------------------------------------------
+BEGIN
+END utils_error
